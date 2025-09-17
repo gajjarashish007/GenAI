@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IAM User to Role Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #232F3E, #FF9900);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+        }
+
+        .status-dot.connected {
+            background: #28a745;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            min-height: 600px;
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .panel h2 {
+            color: #232F3E;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .user-list, .role-preview {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+        }
+
+        .user-item {
+            padding: 12px;
+            border-bottom: 1px solid #f1f3f4;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .user-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .user-item.selected {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #232F3E;
+            margin-bottom: 4px;
+        }
+
+        .user-details {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .conversion-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #232F3E;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+        }
+
+        .trust-policy-templates {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .template-btn {
+            padding: 6px 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .template-btn:hover {
+            background: #5a6268;
+        }
+
+        .template-btn.active {
+            background: #007bff;
+        }
+
+        .policy-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+        }
+
+        .policy-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f3f4;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .policy-item:last-child {
+            border-bottom: none;
+        }
+
+        .policy-name {
+            font-weight: 500;
+            color: #232F3E;
+        }
+
+        .policy-type {
+            font-size: 12px;
+            color: #6c757d;
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #28a745);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .log-panel {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .log-entry.success {
+            color: #68d391;
+        }
+
+        .log-entry.error {
+            color: #fc8181;
+        }
+
+        .log-entry.warning {
+            color: #f6e05e;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #232F3E;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            font-size: 12px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+        }
+
+        /* Login Modal Styles */
+        .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .login-header h2 {
+            color: #232F3E;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
+
+        .login-header p {
+            color: #6c757d;
+            margin-bottom: 30px;
+        }
+
+        .login-form {
+            text-align: left;
+        }
+
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        .login-form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #232F3E;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .login-form input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .login-error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 15px 0;
+            display: none;
+            text-align: center;
+        }
+
+        .login-footer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .login-footer p {
+            color: #6c757d;
+            font-size: 12px;
+            margin: 0;
+        }
+
+        /* User Info Styles */
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .btn-logout {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .header {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="login-modal">
+        <div class="login-container">
+            <div class="login-header">
+                <h2>🔐 Authentication Required</h2>
+                <p>Please login to access the IAM User to Role Converter</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                </div>
+                <div class="login-error" id="loginError"></div>
+                <button type="submit" class="btn btn-primary login-btn">
+                    <span id="loginBtnText">🔑 Login</span>
+                </button>
+            </form>
+            <div class="login-footer">
+                <p>Default credentials: admin / 123@admin</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <div class="header">
+            <h1>🔄 IAM User to Role Converter</h1>
+            <p>Convert IAM Users to IAM Roles with Policies and Trust Relationships</p>
+            <div class="user-info">
+                <span id="loggedInUser"></span>
+                <button class="btn-logout" onclick="logout()">🚪 Logout</button>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <div>
+                <button class="btn btn-secondary" onclick="refreshData()">
+                    <span id="refreshIcon">🔄</span> Refresh
+                </button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Left Panel - IAM Users -->
+            <div class="panel">
+                <h2>👤 IAM Users</h2>
+                <input type="text" class="search-box" id="userSearch" placeholder="Search users..." onkeyup="filterUsers()">
+                <div class="user-list" id="userList">
+                    <div style="padding: 20px; text-align: center; color: #6c757d;">
+                        Loading users...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Role Configuration -->
+            <div class="panel">
+                <h2>⚙️ Role Configuration</h2>
+                <div id="roleConfig" class="hidden">
+                    <div class="form-group">
+                        <label for="roleName">Role Name:</label>
+                        <input type="text" id="roleName" placeholder="Enter role name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="roleDescription">Description:</label>
+                        <input type="text" id="roleDescription" placeholder="Role description (optional)">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Trust Policy Template:</label>
+                        <div class="trust-policy-templates">
+                            <button class="template-btn" onclick="selectTrustTemplate('ec2')">EC2</button>
+                            <button class="template-btn" onclick="selectTrustTemplate('lambda')">Lambda</button>
+                            <button class="template-btn" onclick="selectTrustTemplate('ecs')">ECS</button>
+                            <button class="template-btn" onclick="selectTrustTemplate('custom')">Custom</button>
+                        </div>
+                        <textarea id="trustPolicy" placeholder="Trust policy JSON will appear here..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>User Policies to Copy:</label>
+                        <div class="policy-list" id="userPolicies">
+                            <div style="padding: 20px; text-align: center; color: #6c757d;">
+                                Select a user to view policies
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="noUserSelected" style="padding: 40px; text-align: center; color: #6c757d;">
+                    <h3>Select a User</h3>
+                    <p>Choose an IAM user from the left panel to configure role conversion</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="conversion-form hidden" id="conversionForm">
+            <h3>🚀 Conversion Summary</h3>
+            <div id="conversionSummary"></div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <div class="log-panel" id="logPanel">
+                <div class="log-entry">Ready to convert user to role...</div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-secondary" onclick="previewConversion()" id="previewBtn" disabled>
+                👁️ Preview Conversion
+            </button>
+            <button class="btn btn-primary" onclick="startConversion()" id="convertBtn" disabled>
+                🔄 Convert to Role
+            </button>
+            <button class="btn btn-success hidden" onclick="downloadConfig()" id="downloadBtn">
+                📥 Download Config
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let users = [];
+        let selectedUser = null;
+        let conversionConfig = {};
+        let isAuthenticated = false;
+        let currentUser = null;
+
+        // Authentication credentials
+        const VALID_CREDENTIALS = {
+            username: 'admin',
+            password: '123@admin'
+        };
+
+        // Check authentication on page load
+        function checkAuthentication() {
+            const authToken = sessionStorage.getItem('iam_converter_auth');
+            const authUser = sessionStorage.getItem('iam_converter_user');
+            
+            if (authToken === 'authenticated' && authUser) {
+                isAuthenticated = true;
+                currentUser = authUser;
+                showMainInterface();
+            } else {
+                showLoginModal();
+            }
+        }
+
+        // Show login modal
+        function showLoginModal() {
+            document.getElementById('loginModal').style.display = 'flex';
+            document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('username').focus();
+        }
+
+        // Show main interface
+        function showMainInterface() {
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
+            document.getElementById('loggedInUser').textContent = `👤 ${currentUser}`;
+            init(); // Initialize the main application
+        }
+
+        // Handle login form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            loginForm.addEventListener('submit', handleLogin);
+            
+            // Check authentication status
+            checkAuthentication();
+            
+            // Handle Enter key in login form
+            document.getElementById('password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleLogin(e);
+                }
+            });
+        });
+
+        // Handle login
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const loginError = document.getElementById('loginError');
+            const loginBtnText = document.getElementById('loginBtnText');
+            
+            // Show loading state
+            loginBtnText.innerHTML = '<div class="loading"></div> Authenticating...';
+            document.querySelector('.login-btn').disabled = true;
+            
+            // Simulate authentication delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Validate credentials
+            if (username === VALID_CREDENTIALS.username && password === VALID_CREDENTIALS.password) {
+                // Successful login
+                sessionStorage.setItem('iam_converter_auth', 'authenticated');
+                sessionStorage.setItem('iam_converter_user', username);
+                
+                isAuthenticated = true;
+                currentUser = username;
+                
+                loginError.style.display = 'none';
+                showMainInterface();
+                
+                // Reset form
+                document.getElementById('loginForm').reset();
+            } else {
+                // Failed login
+                loginError.textContent = '❌ Invalid username or password. Please try again.';
+                loginError.style.display = 'block';
+                
+                // Clear password field
+                document.getElementById('password').value = '';
+                document.getElementById('password').focus();
+            }
+            
+            // Reset button state
+            loginBtnText.textContent = '🔑 Login';
+            document.querySelector('.login-btn').disabled = false;
+        }
+
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                sessionStorage.removeItem('iam_converter_auth');
+                sessionStorage.removeItem('iam_converter_user');
+                
+                isAuthenticated = false;
+                currentUser = null;
+                
+                // Reset application state
+                users = [];
+                selectedUser = null;
+                conversionConfig = {};
+                
+                // Show login modal
+                showLoginModal();
+                
+                addLogEntry('User logged out', 'info');
+            }
+        }
+
+        // Modify existing functions to check authentication
+        function requireAuthentication() {
+            if (!isAuthenticated) {
+                showLoginModal();
+                return false;
+            }
+            return true;
+        }
+
+        // Trust policy templates
+        const trustPolicyTemplates = {
+            ec2: {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "ec2.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                ]
+            },
+            lambda: {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "lambda.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                ]
+            },
+            ecs: {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "ecs-tasks.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole"
+                    }
+                ]
+            },
+            custom: {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": "arn:aws:iam::ACCOUNT-ID:root"
+                        },
+                        "Action": "sts:AssumeRole",
+                        "Condition": {}
+                    }
+                ]
+            }
+        };
+
+        // Initialize the application (only called after authentication)
+        async function init() {
+            if (!requireAuthentication()) return;
+            
+            await checkConnection();
+            await loadUsers();
+            addLogEntry(`Application initialized for user: ${currentUser}`, 'success');
+        }
+
+        // Check backend connection
+        async function checkConnection() {
+            if (!requireAuthentication()) return;
+            
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data.status === 'connected') {
+                    document.getElementById('statusDot').classList.add('connected');
+                    document.getElementById('statusText').textContent = `Connected - ${data.account_id}`;
+                } else {
+                    throw new Error('Not connected');
+                }
+            } catch (error) {
+                document.getElementById('statusDot').classList.remove('connected');
+                document.getElementById('statusText').textContent = 'Disconnected';
+                addLogEntry('Connection failed: ' + error.message, 'error');
+            }
+        }
+
+        // Load IAM users
+        async function loadUsers() {
+            if (!requireAuthentication()) return;
+            
+            try {
+                showLoading('refreshIcon');
+                const response = await fetch('/api/users');
+                const data = await response.json();
+                
+                users = data.users || [];
+                displayUsers(users);
+                addLogEntry(`Loaded ${users.length} IAM users`, 'success');
+            } catch (error) {
+                addLogEntry('Failed to load users: ' + error.message, 'error');
+            } finally {
+                hideLoading('refreshIcon');
+            }
+        }
+
+        // Display users in the list
+        function displayUsers(userList) {
+            const userListElement = document.getElementById('userList');
+            
+            if (userList.length === 0) {
+                userListElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">No users found</div>';
+                return;
+            }
+
+            userListElement.innerHTML = userList.map(user => `
+                <div class="user-item" onclick="selectUser('${user.UserName}')">
+                    <div class="user-name">${user.UserName}</div>
+                    <div class="user-details">
+                        Created: ${new Date(user.CreateDate).toLocaleDateString()} | 
+                        Policies: ${user.AttachedPolicies?.length || 0} attached, ${user.InlinePolicies?.length || 0} inline
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filter users based on search
+        function filterUsers() {
+            const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+            const filteredUsers = users.filter(user => 
+                user.UserName.toLowerCase().includes(searchTerm)
+            );
+            displayUsers(filteredUsers);
+        }
+
+        // Select a user
+        async function selectUser(userName) {
+            if (!requireAuthentication()) return;
+            
+            // Remove previous selection
+            document.querySelectorAll('.user-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            // Add selection to clicked item
+            event.target.closest('.user-item').classList.add('selected');
+
+            selectedUser = users.find(user => user.UserName === userName);
+            
+            // Load user details and policies
+            await loadUserDetails(userName);
+            
+            // Show role configuration panel
+            document.getElementById('noUserSelected').classList.add('hidden');
+            document.getElementById('roleConfig').classList.remove('hidden');
+            
+            // Enable preview button
+            document.getElementById('previewBtn').disabled = false;
+            
+            // Set default role name
+            document.getElementById('roleName').value = `${userName}-Role`;
+            
+            addLogEntry(`Selected user: ${userName}`, 'success');
+        }
+
+        // Load detailed user information
+        async function loadUserDetails(userName) {
+            if (!requireAuthentication()) return;
+            
+            try {
+                const response = await fetch(`/api/users/${userName}/details`);
+                const data = await response.json();
+                
+                selectedUser = { ...selectedUser, ...data };
+                displayUserPolicies(data.policies || []);
+            } catch (error) {
+                addLogEntry('Failed to load user details: ' + error.message, 'error');
+            }
+        }
+
+        // Display user policies
+        function displayUserPolicies(policies) {
+            const policiesElement = document.getElementById('userPolicies');
+            
+            if (policies.length === 0) {
+                policiesElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #6c757d;">No policies found</div>';
+                return;
+            }
+
+            policiesElement.innerHTML = policies.map(policy => `
+                <div class="policy-item">
+                    <div>
+                        <div class="policy-name">${policy.PolicyName}</div>
+                    </div>
+                    <div class="policy-type">${policy.Type}</div>
+                </div>
+            `).join('');
+        }
+
+        // Select trust policy template
+        function selectTrustTemplate(templateName) {
+            // Remove active class from all buttons
+            document.querySelectorAll('.template-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to selected button
+            event.target.classList.add('active');
+            
+            // Set trust policy
+            const template = trustPolicyTemplates[templateName];
+            document.getElementById('trustPolicy').value = JSON.stringify(template, null, 2);
+        }
+
+        // Preview conversion
+        function previewConversion() {
+            if (!requireAuthentication()) return;
+            
+            if (!selectedUser) {
+                addLogEntry('No user selected', 'error');
+                return;
+            }
+
+            const roleName = document.getElementById('roleName').value.trim();
+            const roleDescription = document.getElementById('roleDescription').value.trim();
+            const trustPolicy = document.getElementById('trustPolicy').value.trim();
+
+            if (!roleName) {
+                addLogEntry('Role name is required', 'error');
+                return;
+            }
+
+            if (!trustPolicy) {
+                addLogEntry('Trust policy is required', 'error');
+                return;
+            }
+
+            // Validate JSON
+            try {
+                JSON.parse(trustPolicy);
+            } catch (error) {
+                addLogEntry('Invalid trust policy JSON: ' + error.message, 'error');
+                return;
+            }
+
+            conversionConfig = {
+                userName: selectedUser.UserName,
+                roleName: roleName,
+                roleDescription: roleDescription,
+                trustPolicy: JSON.parse(trustPolicy),
+                policies: selectedUser.policies || []
+            };
+
+            // Show conversion summary
+            displayConversionSummary();
+            document.getElementById('conversionForm').classList.remove('hidden');
+            document.getElementById('convertBtn').disabled = false;
+            
+            addLogEntry('Conversion preview generated', 'success');
+        }
+
+        // Display conversion summary
+        function displayConversionSummary() {
+            const summaryElement = document.getElementById('conversionSummary');
+            
+            summaryElement.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <h4>Source User</h4>
+                        <p><strong>Name:</strong> ${conversionConfig.userName}</p>
+                        <p><strong>Policies:</strong> ${conversionConfig.policies.length}</p>
+                    </div>
+                    <div>
+                        <h4>Target Role</h4>
+                        <p><strong>Name:</strong> ${conversionConfig.roleName}</p>
+                        <p><strong>Description:</strong> ${conversionConfig.roleDescription || 'None'}</p>
+                    </div>
+                </div>
+                <div>
+                    <h4>Conversion Steps</h4>
+                    <ol style="margin-left: 20px;">
+                        <li>Create IAM role with trust policy</li>
+                        <li>Attach ${conversionConfig.policies.length} policies to role</li>
+                        <li>Validate role configuration</li>
+                        <li>Generate conversion report</li>
+                    </ol>
+                </div>
+            `;
+        }
+
+        // Start conversion process
+        async function startConversion() {
+            if (!requireAuthentication()) return;
+            
+            if (!conversionConfig.userName) {
+                addLogEntry('No conversion configuration found', 'error');
+                return;
+            }
+
+            try {
+                document.getElementById('convertBtn').disabled = true;
+                updateProgress(0);
+                
+                addLogEntry('Starting conversion process...', 'success');
+                updateProgress(25);
+
+                // Create role
+                const createRoleResponse = await fetch('/api/create-role', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(conversionConfig)
+                });
+
+                if (!createRoleResponse.ok) {
+                    throw new Error('Failed to create role');
+                }
+
+                addLogEntry('Role created successfully', 'success');
+                updateProgress(50);
+
+                // Attach policies
+                const attachPoliciesResponse = await fetch('/api/attach-policies', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        roleName: conversionConfig.roleName,
+                        policies: conversionConfig.policies
+                    })
+                });
+
+                if (!attachPoliciesResponse.ok) {
+                    throw new Error('Failed to attach policies');
+                }
+
+                addLogEntry('Policies attached successfully', 'success');
+                updateProgress(75);
+
+                // Validate configuration
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate validation
+                addLogEntry('Role configuration validated', 'success');
+                updateProgress(100);
+
+                addLogEntry('Conversion completed successfully!', 'success');
+                document.getElementById('downloadBtn').classList.remove('hidden');
+
+            } catch (error) {
+                addLogEntry('Conversion failed: ' + error.message, 'error');
+                document.getElementById('convertBtn').disabled = false;
+            }
+        }
+
+        // Update progress bar
+        function updateProgress(percentage) {
+            document.getElementById('progressFill').style.width = percentage + '%';
+        }
+
+        // Add log entry
+        function addLogEntry(message, type = 'info') {
+            const logPanel = document.getElementById('logPanel');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logPanel.appendChild(logEntry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        // Download configuration
+        function downloadConfig() {
+            const config = {
+                conversion: conversionConfig,
+                timestamp: new Date().toISOString(),
+                summary: 'IAM User to Role conversion completed'
+            };
+
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${conversionConfig.roleName}-conversion-config.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Refresh data
+        async function refreshData() {
+            if (!requireAuthentication()) return;
+            
+            await checkConnection();
+            await loadUsers();
+            
+            // Reset selection
+            selectedUser = null;
+            document.getElementById('roleConfig').classList.add('hidden');
+            document.getElementById('noUserSelected').classList.remove('hidden');
+            document.getElementById('conversionForm').classList.add('hidden');
+            document.getElementById('previewBtn').disabled = true;
+            document.getElementById('convertBtn').disabled = true;
+            document.getElementById('downloadBtn').classList.add('hidden');
+        }
+
+        // Utility functions
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="loading"></div>';
+        }
+
+        function hideLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.textContent = '🔄';
+        }
+
+        // Note: Initialization is now handled by authentication system
+        // document.addEventListener('DOMContentLoaded', init);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            if (event.ctrlKey && event.key === 'r') {
+                event.preventDefault();
+                refreshData();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+{
+  "conversion": {
+    "userName": "example-user",
+    "roleName": "example-user-Role",
+    "roleDescription": "Converted from IAM user example-user",
+    "trustPolicy": {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Service": "ec2.amazonaws.com"
+          },
+          "Action": "sts:AssumeRole"
+        }
+      ]
+    },
+    "policies": [
+      {
+        "PolicyName": "S3ReadOnlyAccess",
+        "PolicyArn": "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+        "Type": "Managed",
+        "Document": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:Get*",
+                "s3:List*"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      },
+      {
+        "PolicyName": "CustomInlinePolicy",
+        "Type": "Inline",
+        "Document": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "arn:aws:logs:*:*:*"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "timestamp": "2025-07-24T10:00:00.000Z",
+  "summary": "IAM User to Role conversion completed",
+  "metadata": {
+    "tool_version": "1.0.0",
+    "aws_account": "123456789012",
+    "aws_region": "us-east-1",
+    "conversion_status": "success",
+    "policies_converted": 2,
+    "conversion_duration": "15 seconds"
+  },
+  "next_steps": [
+    "Update applications to use the new IAM role",
+    "Test role assumption and permissions",
+    "Remove the original IAM user after validation",
+    "Update documentation and access procedures"
+  ]
+}
